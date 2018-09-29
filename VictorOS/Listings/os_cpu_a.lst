@@ -1,0 +1,352 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ;*******************************************************
+                       ************
+    2 00000000         ; È«¾Ö±äÁ¿&º¯Êý
+    3 00000000         ;*******************************************************
+                       ************
+    4 00000000                 IMPORT           OSTCBCurPtr ; Íâ²¿ÎÄ¼þÒýÈËµÄ²Î¿
+                                                            ¼
+    5 00000000                 IMPORT           OSTCBHighRdyPtr
+    6 00000000         
+    7 00000000                 EXPORT           OSStartHighRdy 
+                                                            ; ¸ÃÎÄ¼þ¶¨ÒåµÄº¯Êý
+    8 00000000                 EXPORT           OS_CPU_PendSVHandler
+    9 00000000                 EXPORT           CPU_IntDis
+   10 00000000         
+   11 00000000         ;*******************************************************
+                       ************
+   12 00000000         ;³£Á¿
+   13 00000000         ;ÓÐ¹ØÄÚºËÍâÉè¼Ä´æÆ÷¶¨Òå¿É²Î¿¼¹Ù·½ÎÄµµ£ºSTM32F10xxx Corte
+                       x-M3 programming manual
+   14 00000000         ;ÏµÍ³¿ØÖÆ¿éÍâÉè SCB µØÖ··¶Î§£º0xE000ED00-0xE000ED3F
+   15 00000000         ;*******************************************************
+                       ************
+   16 00000000 E000ED04 
+                       NVIC_INT_CTRL
+                               EQU              0xE000ED04  ; ÖÐ¶Ï¿ØÖÆ¼°×´Ì¬¼Ä´
+                                                            æÆ÷ SCB_ICSR¡£
+   17 00000000 E000ED22 
+                       NVIC_SYSPRI14
+                               EQU              0xE000ED22  ; ÏµÍ³ÓÅÏÈ¼¶¼Ä´æÆ÷ 
+                                                            SCB_SHPR3£º
+   18 00000000         ; bit16~23
+   19 00000000 000000FF 
+                       NVIC_PENDSV_PRI
+                               EQU              0xFF        ; PendSV ÓÅÏÈ¼¶µÄÖµ
+                                                            (×îµÍ)¡£
+   20 00000000 10000000 
+                       NVIC_PENDSVSET
+                               EQU              0x10000000  ; ´¥·¢ PendSV Òì³£µ
+                                                            ÄÖµ Bit28£ºPENDSVSE
+                                                            T
+   21 00000000         
+   22 00000000         ;*******************************************************
+                       *************************************************
+   23 00000000         ;                                     CODE GENERATION DI
+                       RECTIVES
+   24 00000000         ;*******************************************************
+                       *************************************************
+   25 00000000         
+   26 00000000                 PRESERVE8
+   27 00000000                 THUMB
+   28 00000000         
+   29 00000000                 AREA             CODE, CODE, READONLY
+   30 00000000         
+   31 00000000         ;*******************************************************
+                       ************
+   32 00000000         ;                                    DISABLE and ENABLE 
+                       INTERRUPTS
+   33 00000000         ;
+   34 00000000         ; Description: Disable/Enable interrupts.
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   35 00000000         ;
+   36 00000000         ; Prototypes : void  CPU_IntDis(void);
+   37 00000000         ;              void  CPU_IntEn (void);
+   38 00000000         ;*******************************************************
+                       ************
+   39 00000000         CPU_IntDis
+   40 00000000 B672            CPSID            I
+   41 00000002 4770            BX               LR
+   42 00000004         
+   43 00000004         
+   44 00000004         CPU_IntEn
+   45 00000004 B662            CPSIE            I
+   46 00000006 4770            BX               LR
+   47 00000008         
+   48 00000008         ;*******************************************************
+                       ************
+   49 00000008         ;    ¿ªÊ¼Ò»´ÎÉÏÏÂÎÄÇÐ»»
+   50 00000008         ;
+   51 00000008         ;
+   52 00000008         ;*******************************************************
+                       ************
+   53 00000008         OSStartHighRdy
+   54 00000008 4811            LDR              R0, = NVIC_SYSPRI14 ; ÉèÖÃ Pend
+                                                            SV Òì³£ÓÅÏÈ¼¶Îª×îµÍ
+                                                            
+   55 0000000A F04F 01FF       LDR              R1, = NVIC_PENDSV_PRI
+   56 0000000E 7001            STRB             R1, [R0]
+   57 00000010         
+   58 00000010 2000            MOVS             R0, #0      ;ÉèÖÃ psp µÄÖµÎª 0£
+                                                            ¬¿ªÊ¼µÚÒ»´ÎÉÏÏÂÎÄÇÐ
+                                                            »»
+   59 00000012 F380 8809       MSR              PSP, R0
+   60 00000016         
+   61 00000016 480F            LDR              R0, = NVIC_INT_CTRL 
+                                                            ; ´¥·¢ PendSV Òì³£
+   62 00000018         
+   63 00000018 F04F 5180       LDR              R1, = NVIC_PENDSVSET
+   64 0000001C 6001            STR              R1, [R0]
+   65 0000001E         
+   66 0000001E B662            CPSIE            I           ; Ê¹ÄÜ×ÜÖÐ¶Ï£¬NMI º
+                                                            Í HardFault ³ýÍâ
+   67 00000020         
+   68 00000020         OSStartHang
+   69 00000020 E7FE            B                OSStartHang ; ³ÌÐòÓ¦ÓÀÔ¶²»»áÔËÐ
+                                                            Ðµ½ÕâÀï
+   70 00000022         
+   71 00000022         ;*******************************************************
+                       ****************
+   72 00000022         ; OS_CPU_PendSVHandler Òì³£
+   73 00000022         ;*******************************************************
+                       ****************
+   74 00000022         OS_CPU_PendSVHandler
+   75 00000022         ; ¹ØÖÐ¶Ï£¬NMI ºÍ HardFault ³ýÍâ£¬·ÀÖ¹ÉÏÏÂÎÄÇÐ»»±»ÖÐ¶Ï
+   76 00000022 B672            CPSID            I
+   77 00000024         
+   78 00000024         ; ½« psp µÄÖµ¼ÓÔØµ½ R0
+   79 00000024 F3EF 8009       MRS              R0, PSP
+   80 00000028         
+   81 00000028         ; ÅÐ¶Ï R0£¬Èç¹ûÖµÎª 0 ÔòÌø×ªµ½ OS_CPU_PendSVHandler_nosa
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+                       ve
+   82 00000028         ; ½øÐÐµÚÒ»´ÎÈÎÎñÇÐ»»µÄÊ±ºò£¬R0 ¿Ï¶¨Îª 0
+   83 00000028 B120            CBZ              R0, OS_CPU_PendSVHandler_nosave
+   84 0000002A         
+   85 0000002A         ;-----------------------Ò»¡¢±£´æÉÏÎÄ--------------------
+                       ---------
+   86 0000002A         ; ÈÎÎñµÄÇÐ»»£¬¼´°ÑÏÂÒ»¸öÒªÔËÐÐµÄÈÎÎñµÄ¶ÑÕ»ÄÚÈÝ¼ÓÔØµ½ CPU
+                        ¼Ä´æÆ÷ÖÐ
+   87 0000002A         ;-------------------------------------------------------
+                       ------- 
+   88 0000002A         ; ÔÚ½øÈë PendSV Òì³£µÄÊ±ºò£¬µ±Ç° CPU µÄ xPSR£¬PC£¨ÈÎÎñÈë
+                       ¿ÚµØÖ·£©£¬
+   89 0000002A         ; R14£¬R12£¬R3£¬R2£¬R1£¬R0 »á×Ô¶¯´æ´¢µ½µ±Ç°ÈÎÎñ¶ÑÕ»£¬
+   90 0000002A         ; Í¬Ê±µÝ¼õ PSP µÄÖµ£¬Ëæ±ãÍ¨¹ý ´úÂë£ºMRS R0, PSP °Ñ PSP µ
+                       ÄÖµ´«¸ø R0
+   91 0000002A         
+   92 0000002A         ; ÊÖ¶¯´æ´¢ CPU ¼Ä´æÆ÷ R4-R11 µÄÖµµ½µ±Ç°ÈÎÎñµÄ¶ÑÕ»
+   93 0000002A E920 0FF0       STMDB            R0!, {R4-R11}
+   94 0000002E         
+   95 0000002E         ; ¼ÓÔØ OSTCBCurPtr Ö¸ÕëµÄµØÖ·µ½ R1£¬ÕâÀï LDR ÊôÓÚÎ±Ö¸Áî
+   96 0000002E 490A            LDR              R1, = OSTCBCurPtr
+   97 00000030         ; ¼ÓÔØ OSTCBCurPtr Ö¸Õëµ½ R1£¬ÕâÀï LDR ÊôÓÚ ARM Ö¸Áî
+   98 00000030 6809            LDR              R1, [R1]
+   99 00000032         ;  ´æ´¢ R0 µÄÖµµ½ OSTCBCurPtr->OSTCBStkPtr£¬Õâ¸öÊ±ºò R0 
+                       ´æµÄÊÇÈÎÎñ¿ÕÏÐÕ»µÄÕ»¶¥
+  100 00000032 6008            STR              R0, [R1]
+  101 00000034         
+  102 00000034         ;-----------------------¶þ¡¢ÇÐ»»ÏÂÎÄ--------------------
+                       ---------
+  103 00000034         ; ÊµÏÖ OSTCBCurPtr = OSTCBHighRdyPtr
+  104 00000034         ; °ÑÏÂÒ»¸öÒªÔËÐÐµÄÈÎÎñµÄ¶ÑÕ»ÄÚÈÝ¼ÓÔØµ½ CPU ¼Ä´æÆ÷ÖÐ
+  105 00000034         ;-------------------------------------------------------
+                       -------
+  106 00000034         OS_CPU_PendSVHandler_nosave
+  107 00000034         ; ¼ÓÔØ OSTCBCurPtr Ö¸ÕëµÄµØÖ·µ½ R0£¬ÕâÀï LDR ÊôÓÚÎ±Ö¸Áî
+  108 00000034 4808            LDR              R0, = OSTCBCurPtr
+  109 00000036         ; ¼ÓÔØ OSTCBHighRdyPtr Ö¸ÕëµÄµØÖ·µ½ R1£¬ÕâÀï LDR ÊôÓÚÎ±Ö
+                       ¸Áî
+  110 00000036 4909            LDR              R1, = OSTCBHighRdyPtr
+  111 00000038         ; ¼ÓÔØ OSTCBHighRdyPtr Ö¸Õëµ½ R2£¬ÕâÀï LDR ÊôÓÚ ARM Ö¸Áî
+                        
+  112 00000038 680A            LDR              R2, [R1]
+  113 0000003A         ; ´æ´¢ OSTCBHighRdyPtr µ½ OSTCBCurPtr
+  114 0000003A 6002            STR              R2, [R0]
+  115 0000003C         
+  116 0000003C         ; ¼ÓÔØ OSTCBHighRdyPtr µ½ R0 
+  117 0000003C 6810            LDR              R0, [R2]
+  118 0000003E         ; ¼ÓÔØÐèÒªÊÖ¶¯±£´æµÄÐÅÏ¢µ½ CPU ¼Ä´æÆ÷ R4-R11
+  119 0000003E E8B0 0FF0       LDMIA            R0!, {R4-R11}
+  120 00000042         
+  121 00000042         ; ¸üÐÂ PSP µÄÖµ£¬Õâ¸öÊ±ºò PSP Ö¸ÏòÏÂÒ»¸öÒªÖ´ÐÐµÄÈÎÎñµÄ¶Ñ
+                       Õ»µÄÕ»µ×
+  122 00000042         ;£¨Õâ¸öÕ»µ×ÒÑ¾­¼ÓÉÏ¸Õ¸ÕÊÖ¶¯¼ÓÔØµ½ CPU ¼Ä´æÆ÷ R4-R11 µÄÆ«
+                       ÒÆ£© 
+  123 00000042 F380 8809       MSR              PSP, R0
+  124 00000046         
+  125 00000046         ; È·±£Òì³£·µ»ØÊ¹ÓÃµÄ¶ÑÕ»Ö¸ÕëÊÇ PSP£¬¼´ LR ¼Ä´æÆ÷µÄÎ» 2 Ò
+                       ªÎª 1
+  126 00000046 F04E 0E04       ORR              LR, LR, #0x04
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+  127 0000004A         
+  128 0000004A         ; ¿ªÖÐ¶Ï
+  129 0000004A B662            CPSIE            I
+  130 0000004C         
+  131 0000004C         ; Òì³£·µ»Ø£¬Õâ¸öÊ±ºòÈÎÎñ¶ÑÕ»ÖÐµÄÊ£ÏÂÄÚÈÝ½«»á×Ô¶¯¼ÓÔØµ½ x
+                       PSR£¬
+  132 0000004C         ; PC£¨ÈÎÎñÈë¿ÚµØÖ·£©£¬R14£¬R12£¬R3£¬R2£¬R1£¬R0£¨ÈÎÎñµÄÐÎ
+                       ²Î£©
+  133 0000004C         ; Í¬Ê± PSP µÄÖµÒ²½«¸üÐÂ£¬¼´Ö¸ÏòÈÎÎñ¶ÑÕ»µÄÕ»¶¥¡£
+  134 0000004C         ; ÔÚ STM32 ÖÐ£¬¶ÑÕ»ÊÇÓÉ¸ßµØÖ·ÏòµÍµØÖ·Éú³¤µÄ¡£
+  135 0000004C 4770            BX               LR
+  136 0000004E BF00            NOP
+  137 00000050                 END
+              E000ED22 
+              E000ED04 
+              00000000 
+              00000000 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\os_cpu_a.d -o.\objects\os_cpu_a.o -IE:\keil\Nestor\Vi
+ctorOS\RTE -IF:\Keil_v5\ARM\PACK\ARM\CMSIS\5.3.0\CMSIS\Include -IF:\Keil_v5\ARM
+\PACK\Keil\STM32F4xx_DFP\2.5.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include --pred
+efine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 515" --predefine=
+"_RTE_ SETA 1" --predefine="STM32F429xx SETA 1" --list=.\listings\os_cpu_a.lst 
+User\victorOS\Ports\os_cpu_a.asm
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+CODE 00000000
+
+Symbol: CODE
+   Definitions
+      At line 29 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      None
+Comment: CODE unused
+CPU_IntDis 00000000
+
+Symbol: CPU_IntDis
+   Definitions
+      At line 39 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 9 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: CPU_IntDis used once
+CPU_IntEn 00000004
+
+Symbol: CPU_IntEn
+   Definitions
+      At line 44 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      None
+Comment: CPU_IntEn unused
+OSStartHang 00000020
+
+Symbol: OSStartHang
+   Definitions
+      At line 68 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 69 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: OSStartHang used once
+OSStartHighRdy 00000008
+
+Symbol: OSStartHighRdy
+   Definitions
+      At line 53 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 7 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: OSStartHighRdy used once
+OS_CPU_PendSVHandler 00000022
+
+Symbol: OS_CPU_PendSVHandler
+   Definitions
+      At line 74 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 8 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: OS_CPU_PendSVHandler used once
+OS_CPU_PendSVHandler_nosave 00000034
+
+Symbol: OS_CPU_PendSVHandler_nosave
+   Definitions
+      At line 106 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 83 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: OS_CPU_PendSVHandler_nosave used once
+7 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+NVIC_INT_CTRL E000ED04
+
+Symbol: NVIC_INT_CTRL
+   Definitions
+      At line 16 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 61 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: NVIC_INT_CTRL used once
+NVIC_PENDSVSET 10000000
+
+Symbol: NVIC_PENDSVSET
+   Definitions
+      At line 20 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 63 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: NVIC_PENDSVSET used once
+NVIC_PENDSV_PRI 000000FF
+
+Symbol: NVIC_PENDSV_PRI
+   Definitions
+      At line 19 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 55 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: NVIC_PENDSV_PRI used once
+NVIC_SYSPRI14 E000ED22
+
+Symbol: NVIC_SYSPRI14
+   Definitions
+      At line 17 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 54 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: NVIC_SYSPRI14 used once
+4 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+External symbols
+
+OSTCBCurPtr 00000000
+
+Symbol: OSTCBCurPtr
+   Definitions
+      At line 4 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 96 in file User\victorOS\Ports\os_cpu_a.asm
+      At line 108 in file User\victorOS\Ports\os_cpu_a.asm
+
+OSTCBHighRdyPtr 00000000
+
+Symbol: OSTCBHighRdyPtr
+   Definitions
+      At line 5 in file User\victorOS\Ports\os_cpu_a.asm
+   Uses
+      At line 110 in file User\victorOS\Ports\os_cpu_a.asm
+Comment: OSTCBHighRdyPtr used once
+2 symbols
+350 symbols in table
