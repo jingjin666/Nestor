@@ -8,6 +8,9 @@
 #define TASK1_STK_SIZE	128u
 #define TASK2_STK_SIZE	128u
 
+#define TASK1_PRIO	6u
+#define TASK2_PRIO	2u
+
 static CPU_STK task1Stk[TASK1_STK_SIZE];
 static CPU_STK task2Stk[TASK2_STK_SIZE];
 
@@ -56,12 +59,6 @@ static void delay_ms(u32 nTimer)
 	delay_us(i);
 }
 
-/* 软件延时，不必纠结具体的时间 */
-void delay( uint32_t count )
-{
-	for (; count!=0; count--);
-}
-
 int main()
 {
 	OS_ERR p_err;
@@ -76,7 +73,8 @@ int main()
 	
 	OSTask_Create(&task1TCB,
 			(OS_TASK_PTR)task1,
-			0u,
+			0u,
+			TASK1_PRIO,
 			task1Stk,
 			TASK1_STK_SIZE,
 			&p_err);
@@ -84,12 +82,10 @@ int main()
 	OSTask_Create(&task2TCB,
 			(OS_TASK_PTR)task2,
 			0u,
+			TASK2_PRIO,
 			task2Stk,
 			TASK2_STK_SIZE,
 			&p_err);
-
-	OSRdyList[0].headPtr = &task1TCB;
-	OSRdyList[1].headPtr = &task2TCB;
 	
 	OSStart(&p_err);
 }
@@ -105,7 +101,8 @@ void OSSched()
 		OSTCBHighRdyPtr = OSRdyList[0].headPtr;
 	}
 #endif
-	
+
+#if 0	
 	if(OSTCBCurPtr == &OSIdleTaskTCB) {
 		//如果当前任务是空闲任务，尝试执行任务就绪表里的任务
 		//如果其中有任务延时到期，则执行其任务
@@ -143,6 +140,27 @@ void OSSched()
 			
 		}
 	}
+#endif
+
+	CPU_SR_ALLOC();
+
+	//进入临界区
+	CPU_CRITICAL_ENTER();
+
+	//查找最高优先级任务
+	OSPrioHighRdy = OS_PrioGetHighest();
+	OSTCBHighRdyPtr = OSRdyList[OSPrioHighRdy].headPtr;
+
+	//如果当前任务是最高优先级，则不进行任务切换
+	if(OSTCBCurPtr == OSTCBHighRdyPtr) {
+		//退出临界区
+		CPU_CRITICAL_EXIT();
+		return;
+	}
+
+	//退出临界区
+	CPU_CRITICAL_EXIT();
+
 	//任务切换
 	OS_TASK_SW();
 }
@@ -151,11 +169,6 @@ static void task1()
 {
 	for(;;) {
 		printf("task1\r\n");
-
-		//delay(20000000);
-
-		//OSSched();
-
 		OSTimeDly(100);
 	}
 }
@@ -164,11 +177,6 @@ static void task2()
 {
 	for(;;) {
 		printf("task2\r\n");
-		
-		//delay(20000000);
-		
-		//OSSched();
-		
 		OSTimeDly(200);
 	}
 }

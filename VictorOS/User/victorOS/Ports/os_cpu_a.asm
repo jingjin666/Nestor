@@ -3,10 +3,17 @@
 ;*******************************************************************
 	IMPORT OSTCBCurPtr ; 外部文件引人的参考
 	IMPORT OSTCBHighRdyPtr
+	IMPORT OSPrioCur
+	IMPORT OSPrioHighRdy
 
 	EXPORT OSStartHighRdy ; 该文件定义的函数
 	EXPORT OS_CPU_PendSVHandler
 	EXPORT CPU_IntDis
+	EXPORT CPU_IntEn
+	EXPORT CPU_SR_Save
+        EXPORT CPU_SR_Restore
+	EXPORT CPU_CntLeadZeros
+	EXPORT CPU_CntTrailZeros
 
 ;*******************************************************************
 ;常量
@@ -45,6 +52,68 @@ CPU_IntEn
         CPSIE   I
         BX      LR
 
+;********************************************************************************************************
+;                                      CRITICAL SECTION FUNCTIONS
+;
+; Description : Disable/Enable interrupts by preserving the state of interrupts.  Generally speaking, the
+;               state of the interrupt disable flag is stored in the local variable 'cpu_sr' & interrupts
+;               are then disabled ('cpu_sr' is allocated in all functions that need to disable interrupts).
+;               The previous interrupt state is restored by copying 'cpu_sr' into the CPU's status register.
+;
+; Prototypes  : CPU_SR  CPU_SR_Save   (void);
+;               void    CPU_SR_Restore(CPU_SR  cpu_sr);
+;
+; Note(s)     : (1) These functions are used in general like this :
+;
+;                       void  Task (void  *p_arg)
+;                       {
+;                           CPU_SR_ALLOC();                     /* Allocate storage for CPU status register */
+;                               :
+;                               :
+;                           CPU_CRITICAL_ENTER();               /* cpu_sr = CPU_SR_Save();                  */
+;                               :
+;                               :
+;                           CPU_CRITICAL_EXIT();                /* CPU_SR_Restore(cpu_sr);                  */
+;                               :
+;                       }
+;********************************************************************************************************
+
+CPU_SR_Save
+        MRS     R0, PRIMASK                     ; Set prio int mask to mask all (except faults)
+        CPSID   I
+        BX      LR
+
+
+CPU_SR_Restore                                  ; See Note #2.
+        MSR     PRIMASK, R0
+        BX      LR
+        
+;********************************************************************************************************
+;                                          计算前导0函数
+;
+; 描述      ：
+;
+; 函数声明  ： CPU_DATA  CPU_CntLeadZeros(CPU_DATA  val);
+;             
+;********************************************************************************************************
+CPU_CntLeadZeros
+        CLZ     R0, R0                          ; Count leading zeros
+        BX      LR
+
+;********************************************************************************************************
+;                                          计算后导0函数
+;
+; 描述      ：
+;
+; 函数声明  ： CPU_DATA  CPU_CntTrailZeros(CPU_DATA  val);
+;             
+;********************************************************************************************************
+
+CPU_CntTrailZeros
+        RBIT    R0, R0                          ; Reverse bits
+        CLZ     R0, R0                          ; Count trailing zeros
+        BX      LR
+        
 ;*******************************************************************
 ;				开始一次上下文切换
 ;
@@ -104,6 +173,12 @@ OS_CPU_PendSVHandler
 ; 把下一个要运行的任务的堆栈内容加载到 CPU 寄存器中
 ;--------------------------------------------------------------
 OS_CPU_PendSVHandler_nosave
+	; OSPrioCur = OSPrioHighRdy
+	LDR R0, = OSPrioCur
+	LDR R1, = OSPrioHighRdy
+	LDRB R2, [R1]
+	STRB R2, [R0]
+
 	; 加载 OSTCBCurPtr 指针的地址到 R0，这里 LDR 属于伪指令
 	LDR R0, = OSTCBCurPtr
 	; 加载 OSTCBHighRdyPtr 指针的地址到 R1，这里 LDR 属于伪指令
@@ -133,5 +208,4 @@ OS_CPU_PendSVHandler_nosave
 	; 同时 PSP 的值也将更新，即指向任务堆栈的栈顶。
 	; 在 STM32 中，堆栈是由高地址向低地址生长的。
 	BX LR 
-	NOP
 	END

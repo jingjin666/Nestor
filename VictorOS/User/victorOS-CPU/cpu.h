@@ -55,10 +55,27 @@ typedef            void      (*CPU_FNCT_PTR )(void *p_obj);     /* See Note #2b.
 #define  CPU_CFG_ENDIAN_TYPE            CPU_ENDIAN_TYPE_LITTLE  /* Defines CPU data    word-memory order (see Note #2). */
 
 typedef CPU_INT32U CPU_ADDR;
+typedef CPU_INT32U CPU_DATA;
 
  /* 堆栈数据类型重定义 */
 typedef CPU_INT32U CPU_STK;
 typedef CPU_ADDR   CPU_STK_SIZE;
+
+typedef  CPU_INT32U CPU_SR;    
+
+/* 定义一个局部变量，用于保存CPU中断状态 */
+#define  CPU_SR_ALLOC()             CPU_SR  cpu_sr = (CPU_SR)0
+
+
+/* Save    CPU 状态 & 失能中断 */
+#define  CPU_INT_DIS()         do { cpu_sr = CPU_SR_Save(); } while (0)
+/* Restore CPU 状态  */
+#define  CPU_INT_EN()          do { CPU_SR_Restore(cpu_sr); } while (0)
+
+/* 失能中断 */
+#define  CPU_CRITICAL_ENTER()  do { CPU_INT_DIS(); } while (0)
+/* 重新使能中断 */
+#define  CPU_CRITICAL_EXIT()   do { CPU_INT_EN();  } while (0) 
 
 /*
 *********************************************************************************************************
@@ -66,8 +83,14 @@ typedef CPU_ADDR   CPU_STK_SIZE;
 *********************************************************************************************************
 */
 
-void CPU_IntDis(void);/* 在 os_cpu_a.s 中实现 */
+CPU_DATA CPU_CntLeadZeros(CPU_DATA val);    
+CPU_DATA CPU_CntTrailZeros(CPU_DATA val);
 
+void CPU_IntDis(void);/* 在 os_cpu_a.s 中实现 */
+void CPU_IntEn(void);/* 在 os_cpu_a.s 中实现 */
+
+CPU_SR CPU_SR_Save(void);
+void CPU_SR_Restore(CPU_SR cpu_sr);
 
 /*
 *********************************************************************************************************

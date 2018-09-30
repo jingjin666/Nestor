@@ -58,12 +58,22 @@ void OS_CPU_SysTickInit(CPU_INT32U cnts)
 void OSTimeTick(void)
 {
 	unsigned int i = 0;
+	CPU_SR_ALLOC();
+
+	//进入临界区
+	CPU_CRITICAL_ENTER();
 
 	for(i=0; i<OS_CFG_PRIO_MAX; i++) {
 		if(OSRdyList[i].headPtr->TaskDelayTicks > 0) {
 			OSRdyList[i].headPtr->TaskDelayTicks--;
+			if(OSRdyList[i].headPtr->TaskDelayTicks == 0) {
+				OS_PrioInsert(i);
+			}
 		}
 	}
+
+	//退出临界区
+	CPU_CRITICAL_EXIT();
 
 	OSSched();
 }
