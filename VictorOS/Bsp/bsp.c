@@ -11,7 +11,7 @@ CPU_INT32U  BSP_CPU_ClkFreq (void)
     return ((CPU_INT32U)rcc_clocks.HCLK_Frequency);
 }
 
-CPU_INT32U const  OSCfg_TickRate_Hz = 100u;
+CPU_INT32U const  OSCfg_TickRate_Hz = 1000u;
 
 void BSP_Tick_Init ()
 {
@@ -22,7 +22,7 @@ void BSP_Tick_Init ()
 
 	//运行一次需要1/180000000 秒
     cnts  = cpu_clk_freq / (CPU_INT32U)OSCfg_TickRate_Hz;       /* Determine nbr SysTick increments.                    */
-	// 10ms 产生一次中断
+	// 1ms 产生一次中断
     OS_CPU_SysTickInit(cnts);                                   /* Init uC/OS periodic time src (SysTick).              */
 }
 

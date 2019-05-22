@@ -4,7 +4,7 @@
  *      *** Do not modify ! ***
  *
  * Project: 'VictorOS' 
- * Target:  'Target 1' 
+ * Target:  'rtos' 
  */
 
 #ifndef RTE_COMPONENTS_H

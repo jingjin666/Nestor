@@ -101,7 +101,9 @@ OS_EXT OS_PRIO OSPrioCur;
 OS_EXT OS_PRIO OSPrioHighRdy;
 
 void OSTimeTick(void);	
+
 void OSTimeDly(OS_TICK dly);
+void OSTimeDlyMS(CPU_INT32U ms);
 
 void OS_RdyListInit(void);
 void OS_RdyListInsertHead(OS_TCB *p_tcb);

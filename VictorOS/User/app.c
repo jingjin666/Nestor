@@ -7,17 +7,24 @@
 
 #define TASK1_STK_SIZE	128u
 #define TASK2_STK_SIZE	128u
+#define TASK3_STK_SIZE	128u
 
 #define TASK1_PRIO	6u
-#define TASK2_PRIO	2u
+#define TASK2_PRIO	12u
+#define TASK3_PRIO	4u
+
 
 static CPU_STK task1Stk[TASK1_STK_SIZE];
 static CPU_STK task2Stk[TASK2_STK_SIZE];
+static CPU_STK task3Stk[TASK2_STK_SIZE];
 
-static OS_TCB task1TCB, task2TCB;
+
+static OS_TCB task1TCB, task2TCB, task3TCB;
 
 static void task1(void);
 static void task2(void);
+static void task3(void);
+
 
 void welcomeVictorOS()
 {
@@ -86,6 +93,14 @@ int main()
 			task2Stk,
 			TASK2_STK_SIZE,
 			&p_err);
+
+	OSTask_Create(&task3TCB,
+		(OS_TASK_PTR)task3,
+		0u,
+		TASK3_PRIO,
+		task3Stk,
+		TASK3_STK_SIZE,
+		&p_err);
 	
 	OSStart(&p_err);
 }
@@ -169,7 +184,7 @@ static void task1()
 {
 	for(;;) {
 		printf("task1\r\n");
-		OSTimeDly(100);
+		OSTimeDlyMS(100);
 	}
 }
 
@@ -177,6 +192,15 @@ static void task2()
 {
 	for(;;) {
 		printf("task2\r\n");
-		OSTimeDly(200);
+		OSTimeDlyMS(200);
 	}
 }
+
+static void task3()
+{
+	for(;;) {
+		printf("task3\r\n");
+		OSTimeDlyMS(500);
+	}
+}
+
